@@ -23,11 +23,12 @@ def disconnect():
 
 def create():
     cur = conn.cursor()
-    q = '''CREATE TABLE IF NOT EXISTS tempusers(
+    q = '''CREATE TABLE IF NOT EXISTS tarpusers(
         id SERIAL PRIMARY KEY,
-        username VARCHAR(255) NOT NULL,
+        regno VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
-        token VARCHAR(255) NOT NULL,
+        inside VARCHAR(255) NOT NULL DEFAULT 'YES',
+        fine INTEGER NOT NULL DEFAULT 0,
         encodings TEXT NOT NULL
     )'''
     cur.execute(q)
