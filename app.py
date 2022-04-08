@@ -2,7 +2,7 @@ import cv2
 from flask import Flask, Response, render_template, request, redirect, session, url_for, flash, jsonify
 from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
-from facedetector import detect, faceencodingvalues, predata
+from facedetector import detectmask, detectface, faceencodingvalues, predata
 import db
 import os
 
@@ -13,6 +13,9 @@ mail= Mail(app)
 UPLOAD_FOLDER = 'static/uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = os.getenv('SECRET_KEY')
+
+maskdetected = False
+facedetected = False
 
 dbconnect = db.connect()
 
@@ -27,22 +30,39 @@ def home():
 
 cap = cv2.VideoCapture(0)
 def gen_frames():
-	global recorded,cap
+	global cap,maskdetected,facedetected
 	while True:
 		sucess,img = cap.read()
-		(frame,ans) = detect(img)
-		recorded = ans
-		if recorded == "YES":
-			break
+		if maskdetected == False and facedetected == False:
+			ans = detectmask(img)
+			if ans == "mask":maskdetected = True
+			else:
+				ans = detectface(img)
+				if ans:facedetected = ans
+		elif maskdetected == False:
+			ans = detectmask(img)
+			if ans == "mask":maskdetected = True
+		else:
+			ans = detectface(img)
+			if ans:facedetected = ans
 		yield(b'--frame\r\n'
-					b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-	print("yield condition exit")
-	cap.release()
+					b'Content-Type: image/jpeg\r\n\r\n' + img + b'\r\n')
 
 @app.route("/video_feed")
 def video_feed():
 	return Response(gen_frames(),
 					mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/recorded')
+def recorded():
+	return jsonify({"mask":maskdetected, "face":facedetected})
+
+@app.route('/recorddone', methods = ['POST', 'GET'])
+def recorddone():
+	global maskdetected,facedetected
+	cap.release()
+	maskdetected,facedetected = False, False
+	return redirect(url_for('home'))
 
 # ============================================================================================================
 
@@ -68,12 +88,9 @@ def admin():
 		if mode == "add":
 			regno = values["regno"]
 			email = values["email"]
-
-			q = "select * from tarpusers where email = '{}'".format(email)
-			result = db.select(q)
+			result = db.select("select * from tarpusers where email = '{}'".format(email))
 			if len(result) == 0:
-				q = "select * from tarpusers where regno = '{}'".format(regno)
-				result = db.select(q)
+				result = db.select("select * from tarpusers where regno = '{}'".format(regno))
 				if len(result) == 0:
 					file = request.files['file']
 					if file:
@@ -84,8 +101,7 @@ def admin():
 					if len(facelocs)==0:
 						flash("No face detected")
 						return redirect(url_for("admin"))
-					q = "insert into tarpusers(regno,email,encodings) values('{}','{}','{}')".format(regno,email,str(faceencodings.tolist()))
-					db.insert(q)
+					db.insert("insert into tarpusers(regno,email,encodings) values('{}','{}','{}')".format(regno,email,str(faceencodings.tolist())))
 					flash("User added")
 					return redirect(url_for("admin"))
 				elif len(result) == 1:

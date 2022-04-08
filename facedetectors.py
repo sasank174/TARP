@@ -32,7 +32,7 @@ def faceencodingvalues(img):
 def predata(email):
 	encodinglist = []
 	emaillist = []
-	q = "select email,encodings from tempusers"
+	q = "select email,encodings from tarpusers"
 	result = db.select(q)
 	for i in result:
 		emaillist.append(i[0])
