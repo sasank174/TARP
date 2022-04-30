@@ -10,8 +10,16 @@
 
 <body>
     <h1>face and mask detection</h1>
+    <h3 id="facename"></h3>
 
     <img src="{{ url_for('video_feed') }}" height="60%">
+
+    
+    <label for="">face detected</label>
+    <input type="checkbox" id="face">
+    <label for="">mask detected</label>
+    <input type="checkbox" id="mask">
+
 
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script>
@@ -22,11 +30,17 @@
         function refresh() {
             setTimeout(function () {
                 $.getJSON('/recorded', function (data) {
-                    console.log(data);
-                    // if (data == "YES") {
-                    //   window.location.href = "http://127.0.0.1:7890/recorddone";
-                    // }
-                    //$('#test').text(data);
+                    console.log(data.face,data.mask);
+                    document.getElementById('facename').innerHTML = data.face;
+                    if (data.face) $('#face').prop('checked', true);
+                    else $('#face').prop('checked', false);
+                    
+                    if (data.mask) $('#mask').prop('checked', true);
+                    else $('#mask').prop('checked', false);
+                    if (data.face != false & data.mask == true) {
+                        //console.log('face and mask');
+                        window.location.href = "http://127.0.0.1:8000/recorddone";
+                    }
                 });
                 refresh();
             }, 1000);

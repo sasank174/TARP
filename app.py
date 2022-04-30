@@ -1,10 +1,13 @@
 import cv2
 from flask import Flask, Response, render_template, request, redirect, session, url_for, flash, jsonify
 from flask_mail import Mail, Message
+from numpy import diff
 from werkzeug.utils import secure_filename
 from facedetector import detectmask, detectface, faceencodingvalues, predata
 import db
 import os
+import cv2
+import datetime
 
 
 
@@ -23,6 +26,9 @@ dbconnect = db.connect()
 @app.route("/home")
 def home():
 	predata()
+	global maskdetected
+	global facedetected
+	maskdetected,facedetected = False, False
 	return render_template("index.html")
 
 
@@ -32,21 +38,25 @@ cap = cv2.VideoCapture(0)
 def gen_frames():
 	global cap,maskdetected,facedetected
 	while True:
+		if maskdetected == "wait" and facedetected == "wait":
+			continue
 		sucess,img = cap.read()
-		if maskdetected == False and facedetected == False:
-			ans = detectmask(img)
-			if ans == "mask":maskdetected = True
-			else:
-				ans = detectface(img)
-				if ans:facedetected = ans
-		elif maskdetected == False:
-			ans = detectmask(img)
-			if ans == "mask":maskdetected = True
-		else:
+		if facedetected == False:
 			ans = detectface(img)
-			if ans:facedetected = ans
-		yield(b'--frame\r\n'
-					b'Content-Type: image/jpeg\r\n\r\n' + img + b'\r\n')
+			if ans: facedetected = ans
+			ret,buffer=cv2.imencode('.jpg',img)
+		elif maskdetected == False:
+			ans,box,pred = detectmask(img)
+			if ans == "mask":maskdetected = True
+			(startX, startY, endX, endY) = box
+			color = (0, 255, 0) if ans == "mask" else (0, 0, 255)
+			(mask, withoutMask) = pred
+			cv2.putText(img, ans, (startX, startY - 10),cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+			cv2.rectangle(img, (startX, startY), (endX, endY), color, 2)
+			ret,buffer=cv2.imencode('.jpg',img)
+
+		frame=buffer.tobytes()
+		yield(b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 @app.route("/video_feed")
 def video_feed():
@@ -59,10 +69,29 @@ def recorded():
 
 @app.route('/recorddone', methods = ['POST', 'GET'])
 def recorddone():
-	global maskdetected,facedetected
-	cap.release()
-	maskdetected,facedetected = False, False
-	return redirect(url_for('home'))
+	print("recorddone")
+	global maskdetected
+	global facedetected
+	ans = db.select("SELECT inside,fine FROM tarpusers WHERE email = '"+facedetected+"'")
+	inside,fine = ans[0]
+	if inside == "YES":
+		now = datetime.datetime.now()
+		now = now.strftime("%Y-%m-%d %H:%M:%S")
+		db.insert("UPDATE tarpusers SET inside = '"+ now +"' WHERE email = '"+facedetected+"'")
+	else:
+		diff = datetime.datetime.now() - datetime.datetime.strptime(inside, "%Y-%m-%d %H:%M:%S")
+		days, seconds = diff.days, diff.seconds
+		hours = days * 24 + seconds // 3600
+		if hours > 3:
+			fine = fine + (hours - 3) * 10
+			db.insert("UPDATE tarpusers SET fine = '"+ str(fine) +"', inside = 'YES'  WHERE email = '"+facedetected+"'")
+		else:db.insert("UPDATE tarpusers SET inside = 'YES' WHERE email = '"+facedetected+"'")
+	# cap.release()
+	cv2.destroyAllWindows()
+	x = facedetected
+	maskdetected,facedetected = "wait", "wait"
+	return render_template("redirect.html", email = x,fine = fine)
+	# return redirect(url_for('redirect'))
 
 # ============================================================================================================
 
@@ -121,7 +150,7 @@ def admin():
 @app.route("/logout")
 def logout():
 	session.clear()
-	return redirect(url_for("login"))
+	return redirect(url_for("home"))
 
 
 if __name__ == '__main__':

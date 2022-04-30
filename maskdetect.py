@@ -6,9 +6,9 @@ import cv2
 
 
 def detect_and_predict_mask(frame):
-	maskNet = load_model(r"mask_detector.model")
-	prototxtPath = r"deploy.prototxt"
-	weightsPath = r"res10_300x300_ssd_iter_140000.caffemodel"
+	maskNet = load_model(r"mask/mask_detector.model")
+	prototxtPath = r"mask/deploy.prototxt"
+	weightsPath = r"mask/res10_300x300_ssd_iter_140000.caffemodel"
 	faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
 	
 	(h, w) = frame.shape[:2]
@@ -41,22 +41,3 @@ def detect_and_predict_mask(frame):
 		preds = maskNet.predict(faces, batch_size=32)
 
 	return (locs, preds)
-
-# while True:
-# 	ret, frame = cap.read()
-# 	frame = imutils.resize(frame, width=800)
-# 	frame = cv2.flip(frame, 1)
-# 	(locs, preds) = detect_and_predict_mask(frame, faceNet, maskNet)
-
-# 	for (box, pred) in zip(locs, preds):
-# 		(startX, startY, endX, endY) = box
-# 		(mask, withoutMask) = pred
-# 		label = "Mask" if mask > withoutMask else "No Mask"
-# 		color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
-# 		label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
-# 		cv2.putText(frame, label, (startX, startY - 10),cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
-# 		cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
-
-# 	cv2.imshow('frame', frame)
-# 	if cv2.waitKey(1) & 0xFF == ord('q'):
-# 		break
