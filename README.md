@@ -11,6 +11,8 @@ Mask and Face detection using mobilenetV2
 
 
 #### **requirements:**
+
+Frok the project
 clone from https://github.com/sasank174/TARP.git
 ```
 - git clone https://github.com/sasank174/TARP.git
