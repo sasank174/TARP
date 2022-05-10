@@ -11,9 +11,9 @@ Mask and Face detection using mobilenetV2
 
 
 #### **requirements:**
-clone from https://github.com/sasank174/fake_news_detection.git
+clone from https://github.com/sasank174/TARP.git
 ```
-- git clone https://github.com/sasank174/fake_news_detection.git
+- git clone https://github.com/sasank174/TARP.git
 - pip install -r requirements.txt
 - run python app.py
 ```
