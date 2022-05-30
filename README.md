@@ -1,6 +1,6 @@
 # TARP
 
-Mask and Face detection using mobilenetV2
+Mask and Face detection using mobilenetV2 and face detection module
 
 #### **Models**
 
